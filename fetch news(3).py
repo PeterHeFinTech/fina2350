@@ -18,7 +18,7 @@ else:
 
 BASE_URL = "https://www.alphavantage.co/query"
 
-# 👑 更新了输出文件名，专门为 Category C 定制
+
 OUT_FILE = Path(__file__).resolve().parent / "category_c_policy_shocks.json"
 CSV_FILE = Path(__file__).resolve().parent / "nvda_sentiment_cat_c.csv"
 
@@ -26,11 +26,11 @@ TARGET_TICKER = os.getenv("TARGET_TICKER", "NVDA").upper()
 RELEVANCE_THRESHOLD = float(os.getenv("NVDA_RELEVANCE_THRESHOLD", "0.3"))
 
 MAX_EVENTS = int(os.getenv("MAX_EVENTS", "20"))
-SLEEP_BETWEEN_CALLS = float(os.getenv("SLEEP_SECONDS", "12")) # 保护 API 额度的完美设计
+SLEEP_BETWEEN_CALLS = float(os.getenv("SLEEP_SECONDS", "12")) 
 
 # ==========================================
-# 👑 CATEGORY C: POLICY / REGULATORY SHOCKS
-# 全部精确到历史 T=0 爆发日，适配 [-1, +2] 窗口
+#  CATEGORY C: POLICY / REGULATORY SHOCKS
+#  [-1, +2] 
 # ==========================================
 EVENTS = [
     {"event_date": "2022-08-09", "event_title": "US Passes CHIPS and Science Act", "tickers": "NVDA,INTC,AMD", "topics": "technology,economy_macro"},
@@ -74,7 +74,7 @@ def extract_ticker_sentiment(item: dict, ticker: str) -> tuple[float | None, flo
     return None, None
 
 
-# 严格的事件研究窗口：[-1, +2]
+# [-1, +2]
 def exact_event_window(event_date: str) -> tuple[str, str]:
     anchor = datetime.strptime(event_date, "%Y-%m-%d")
     start = anchor - timedelta(days=1)
