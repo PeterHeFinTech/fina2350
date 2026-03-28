@@ -6,20 +6,28 @@ import csv
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-# Load API key from file
-API_KEY_FILE = Path(__file__).resolve().parent / "api_key.txt"
-if API_KEY_FILE.exists():
-    API_KEY = API_KEY_FILE.read_text().strip()
-else:
+# Load API key from file (current directory or parent directories), then env var
+SEARCH_START = Path(__file__).resolve().parent
+API_KEY = ""
+for directory in [SEARCH_START, *SEARCH_START.parents]:
+    candidate = directory / "api_key.txt"
+    if candidate.exists():
+        API_KEY = candidate.read_text().strip()
+        if API_KEY:
+            break
+
+if not API_KEY:
     API_KEY = os.getenv("ALPHAVANTAGE_API_KEY", "")
     if not API_KEY:
-        print("ERROR: api_key.txt not found and ALPHAVANTAGE_API_KEY env var not set")
+        print("ERROR: api_key.txt not found in current/parent directories and ALPHAVANTAGE_API_KEY env var not set")
         exit(1)
+
 BASE_URL = "https://www.alphavantage.co/query"
 OUT_FILE = Path(__file__).resolve().parent / "hardware_arch_shocks_alphavantage.json"
 CSV_FILE = Path(__file__).resolve().parent / "nvda_sentiment_news.csv"
 TARGET_TICKER = os.getenv("TARGET_TICKER", "NVDA").upper()
 RELEVANCE_THRESHOLD = float(os.getenv("NVDA_RELEVANCE_THRESHOLD", "0.3"))
+TOP_NEWS_PER_EVENT = int(os.getenv("TOP_NEWS_PER_EVENT", "2"))
 
 MAX_EVENTS = int(os.getenv("MAX_EVENTS", "20"))
 SLEEP_BETWEEN_CALLS = float(os.getenv("SLEEP_SECONDS", "12"))
@@ -116,10 +124,17 @@ def fetch_event_news(event: dict) -> dict:
 
     feed = payload.get("feed", []) if isinstance(payload, dict) else []
     articles = []
+    seen_urls = set()
     for item in feed:
         nvda_sentiment_score, nvda_relevance = extract_ticker_sentiment(item, TARGET_TICKER)
-        if nvda_relevance is None or nvda_relevance <= RELEVANCE_THRESHOLD:
+        if nvda_relevance is None or nvda_relevance < RELEVANCE_THRESHOLD:
             continue
+
+        url = item.get("url")
+        if url in seen_urls:
+            continue
+        if url:
+            seen_urls.add(url)
 
         articles.append(
             {
@@ -129,11 +144,20 @@ def fetch_event_news(event: dict) -> dict:
                 "nvda_relevance": nvda_relevance,
                 "nvda_sentiment_score": nvda_sentiment_score,
                 "overall_sentiment_score": to_float(item.get("overall_sentiment_score")),
-                "url": item.get("url"),
+                "url": url,
                 "summary": item.get("summary"),
                 "overall_sentiment_label": item.get("overall_sentiment_label"),
             }
         )
+
+    top_articles = sorted(
+        articles,
+        key=lambda article: (
+            article.get("nvda_relevance") if article.get("nvda_relevance") is not None else -1,
+            article.get("publish_date") or "",
+        ),
+        reverse=True,
+    )[:TOP_NEWS_PER_EVENT]
 
     return {
         "event_date": event["event_date"],
@@ -142,12 +166,13 @@ def fetch_event_news(event: dict) -> dict:
         "time_to": time_to,
         "tickers": event["tickers"],
         "article_count": len(articles),
-        "articles": articles,
+        "selected_count": len(top_articles),
+        "articles": top_articles,
     }
 
 
 def main() -> None:
-    selected_events = EVENTS[:MAX_EVENTS]
+    selected_events = EVENTS[:MAX_EVENTS] if MAX_EVENTS > 0 else EVENTS
 
     result = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -169,6 +194,7 @@ def main() -> None:
         "title",
         "source",
         "nvda_relevance",
+        "nvda_sentiment_score",
         "overall_sentiment_score",
         "url",
         "summary",
@@ -185,7 +211,7 @@ def main() -> None:
         writer.writerows(csv_rows)
 
     print(
-        f"Saved: {CSV_FILE} (rows={len(csv_rows)}, ticker={TARGET_TICKER}, relevance>{RELEVANCE_THRESHOLD})"
+        f"Saved: {CSV_FILE} (rows={len(csv_rows)}, top={TOP_NEWS_PER_EVENT}/event, ticker={TARGET_TICKER}, relevance>={RELEVANCE_THRESHOLD})"
     )
 
 
