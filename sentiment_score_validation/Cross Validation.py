@@ -10,7 +10,7 @@ print("==================================================")
 # ==========================================
 # 1. Load the Purified Dataset
 # ==========================================
-input_csv = "nvda_cat_c_highest_relevance_only.csv"
+input_csv = "/Users/hetianqu/Documents/FINA2350/nvda_sentiment_news.csv"
 try:
     df = pd.read_csv(input_csv)
     print(f" Loaded purified dataset: {len(df)} core events found.")
