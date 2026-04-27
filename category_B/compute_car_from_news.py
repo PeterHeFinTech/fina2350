@@ -12,6 +12,8 @@ NVDA_FILE = PRICE_DIR / "NVDA_5Y.csv"
 QQQ_FILE = PRICE_DIR / "QQQ_5Y.csv"
 OUT_FILE = BASE_DIR / "category_B_car_sentiment.csv"
 MARKET_CLOSE = time(16, 0)
+CAPM_LOOKBACK = 252
+RISK_FREE_RATE = 0.02
 
 
 def load_price_series(path: Path, close_name: str) -> pd.DataFrame:
@@ -29,9 +31,18 @@ def build_abnormal_returns() -> pd.DataFrame:
     merged = pd.merge(nvda, qqq, on="Date", how="inner").sort_values("Date")
     merged["r_nvda"] = merged["Close_NVDA"].pct_change()
     merged["r_qqq"] = merged["Close_QQQ"].pct_change()
-    merged["ar"] = merged["r_nvda"] - merged["r_qqq"]
-    merged = merged.dropna(subset=["ar"]).reset_index(drop=True)
+    merged = merged.dropna(subset=["r_nvda", "r_qqq"]).reset_index(drop=True)
     return merged
+
+
+def get_event_date(news_dt: pd.Timestamp) -> pd.Timestamp | None:
+    if pd.isna(news_dt):
+        return None
+
+    event_date = news_dt.normalize()
+    if news_dt.time() >= MARKET_CLOSE:
+        event_date = event_date + pd.Timedelta(days=1)
+    return event_date
 
 
 def find_event_index(trading_dates: pd.Series, news_date: pd.Timestamp) -> int | None:
@@ -41,18 +52,25 @@ def find_event_index(trading_dates: pd.Series, news_date: pd.Timestamp) -> int |
     return int(pos)
 
 
-def get_event_date(news_dt: pd.Timestamp) -> pd.Timestamp | None:
-    if pd.isna(news_dt):
+def estimate_capm_beta(returns_df: pd.DataFrame, end_idx: int, lookback: int = CAPM_LOOKBACK) -> float | None:
+    start_idx = max(0, end_idx - lookback)
+    hist = returns_df.loc[start_idx:end_idx - 1, ["r_nvda", "r_qqq"]].dropna()
+    if len(hist) < 2:
         return None
 
-    event_date = news_dt.normalize()
+    r_stock = hist["r_nvda"] - RISK_FREE_RATE
+    r_market = hist["r_qqq"] - RISK_FREE_RATE
+    market_var = float(((r_market - r_market.mean()) ** 2).sum())
+    if market_var <= 0:
+        return None
 
-    # If the news is announced after market close, shift the event day to the
-    # next trading day when computing CAR0.
-    if news_dt.time() >= MARKET_CLOSE:
-        event_date = event_date + pd.Timedelta(days=1)
+    cov = float(((r_stock - r_stock.mean()) * (r_market - r_market.mean())).sum())
+    return cov / market_var
 
-    return event_date
+
+def capm_abnormal_return(r_nvda: float, r_qqq: float, beta: float) -> float:
+    expected = RISK_FREE_RATE + beta * (r_qqq - RISK_FREE_RATE)
+    return r_nvda - expected
 
 
 def compute_car_row(returns_df: pd.DataFrame, t_idx: int) -> tuple[float | None, float | None, float | None, float | None]:
@@ -62,7 +80,12 @@ def compute_car_row(returns_df: pd.DataFrame, t_idx: int) -> tuple[float | None,
     if start < 0 or end >= len(returns_df):
         return None, None, None, None
 
-    ar_window = returns_df.loc[start:end, "ar"].reset_index(drop=True)
+    beta = estimate_capm_beta(returns_df, t_idx)
+    if beta is None:
+        return None, None, None, None
+
+    window = returns_df.loc[start:end, ["r_nvda", "r_qqq"]].reset_index(drop=True)
+    ar_window = window.apply(lambda x: capm_abnormal_return(float(x["r_nvda"]), float(x["r_qqq"]), beta), axis=1)
 
     car_m1 = float(ar_window.iloc[0])
     car_0 = float(ar_window.iloc[0:2].sum())
