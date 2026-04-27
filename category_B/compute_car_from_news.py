@@ -1,5 +1,6 @@
 from pathlib import Path
-import numpy as np
+from datetime import time
+
 import pandas as pd
 
 
@@ -10,12 +11,7 @@ NEWS_FILE = BASE_DIR / "category_B.csv"
 NVDA_FILE = PRICE_DIR / "NVDA_5Y.csv"
 QQQ_FILE = PRICE_DIR / "QQQ_5Y.csv"
 OUT_FILE = BASE_DIR / "category_B_car_sentiment.csv"
-
-# CAPM event-study settings
-ESTIMATION_WINDOW = 120
-ESTIMATION_GAP = 20
-ANNUAL_RF_RATE = 0.02
-TRADING_DAYS_PER_YEAR = 252
+MARKET_CLOSE = time(16, 0)
 
 
 def load_price_series(path: Path, close_name: str) -> pd.DataFrame:
@@ -33,7 +29,8 @@ def build_abnormal_returns() -> pd.DataFrame:
     merged = pd.merge(nvda, qqq, on="Date", how="inner").sort_values("Date")
     merged["r_nvda"] = merged["Close_NVDA"].pct_change()
     merged["r_qqq"] = merged["Close_QQQ"].pct_change()
-    merged = merged.dropna(subset=["r_nvda", "r_qqq"]).reset_index(drop=True)
+    merged["ar"] = merged["r_nvda"] - merged["r_qqq"]
+    merged = merged.dropna(subset=["ar"]).reset_index(drop=True)
     return merged
 
 
@@ -44,51 +41,28 @@ def find_event_index(trading_dates: pd.Series, news_date: pd.Timestamp) -> int |
     return int(pos)
 
 
-def estimate_capm_alpha_beta(
-    returns_df: pd.DataFrame,
-    t_idx: int,
-    estimation_window: int = ESTIMATION_WINDOW,
-    estimation_gap: int = ESTIMATION_GAP,
-    daily_rf: float = 0.0,
-) -> tuple[float | None, float | None]:
-    est_end = t_idx - estimation_gap - 1
-    est_start = est_end - estimation_window + 1
+def get_event_date(news_dt: pd.Timestamp) -> pd.Timestamp | None:
+    if pd.isna(news_dt):
+        return None
 
-    if est_start < 0 or est_end < est_start:
-        return None, None
+    event_date = news_dt.normalize()
 
-    est = returns_df.loc[est_start:est_end, ["r_nvda", "r_qqq"]].dropna()
-    if len(est) < 30:
-        return None, None
+    # If the news is announced after market close, shift the event day to the
+    # next trading day when computing CAR0.
+    if news_dt.time() >= MARKET_CLOSE:
+        event_date = event_date + pd.Timedelta(days=1)
 
-    x = est["r_qqq"].to_numpy() - daily_rf
-    y = est["r_nvda"].to_numpy() - daily_rf
-
-    x_var = float(x.var())
-    if x_var <= 1e-16:
-        return None, None
-
-    beta = float(np.cov(x, y, ddof=0)[0, 1] / x_var)
-    alpha = float(y.mean() - beta * x.mean())
-    return alpha, beta
+    return event_date
 
 
-def compute_car_row(
-    returns_df: pd.DataFrame,
-    t_idx: int,
-    alpha: float,
-    beta: float,
-    daily_rf: float,
-) -> tuple[float | None, float | None, float | None, float | None]:
+def compute_car_row(returns_df: pd.DataFrame, t_idx: int) -> tuple[float | None, float | None, float | None, float | None]:
     start = t_idx - 1
     end = t_idx + 2
 
     if start < 0 or end >= len(returns_df):
         return None, None, None, None
 
-    event_window = returns_df.loc[start:end, ["r_nvda", "r_qqq"]].reset_index(drop=True)
-    expected_ret = daily_rf + alpha + beta * (event_window["r_qqq"] - daily_rf)
-    ar_window = event_window["r_nvda"] - expected_ret
+    ar_window = returns_df.loc[start:end, "ar"].reset_index(drop=True)
 
     car_m1 = float(ar_window.iloc[0])
     car_0 = float(ar_window.iloc[0:2].sum())
@@ -104,35 +78,21 @@ def main() -> None:
 
     returns_df = build_abnormal_returns()
     trading_dates = returns_df["Date"]
-    daily_rf = ANNUAL_RF_RATE / TRADING_DAYS_PER_YEAR
 
     rows = []
     for _, row in news.iterrows():
         if pd.isna(row["publish_date"]):
             continue
 
-        event_date = row["publish_date"].normalize()
+        event_date = get_event_date(row["publish_date"])
+        if event_date is None:
+            continue
+
         t_idx = find_event_index(trading_dates, event_date)
         if t_idx is None:
             continue
 
-        alpha, beta = estimate_capm_alpha_beta(
-            returns_df,
-            t_idx,
-            estimation_window=ESTIMATION_WINDOW,
-            estimation_gap=ESTIMATION_GAP,
-            daily_rf=daily_rf,
-        )
-        if alpha is None or beta is None:
-            continue
-
-        car_m1, car_0, car_1, car_2 = compute_car_row(
-            returns_df,
-            t_idx,
-            alpha=alpha,
-            beta=beta,
-            daily_rf=daily_rf,
-        )
+        car_m1, car_0, car_1, car_2 = compute_car_row(returns_df, t_idx)
         if car_m1 is None:
             continue
 
