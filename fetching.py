@@ -93,7 +93,7 @@ def clean_and_align_data(df_raw):
             dt_utc = datetime.strptime(row['publish_date'][:19], '%Y-%m-%dT%H:%M:%S')
             dt_final = dt_utc + timedelta(days=1) if dt_utc.hour >= 20 else dt_utc
             
-           
+            # Match Category B Standard Schema
             cleaned_list.append({
                 "publish_date": dt_final.strftime('%Y-%m-%d %H:%M:%S'),
                 "source": row['source'],
