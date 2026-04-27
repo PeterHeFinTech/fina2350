@@ -97,7 +97,7 @@ def analyze_policy_impact(raw_input_csv, final_output_csv):
     # Sort by date for the Event Study
     final_report = final_report.sort_values(by='publish_date')
 
-    # Rename columns to match the "Cleaned" format Peter expects
+    # Rename columns to match the "Cleaned" format expects
     final_report.columns = ['publish_date', 'title', 'relevance_score', 'summary_sentiment_score', 'source', 'url']
 
     final_report.to_csv(final_output_csv, index=False)
