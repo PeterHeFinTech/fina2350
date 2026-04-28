@@ -13,7 +13,7 @@ QQQ_FILE = PRICE_DIR / "QQQ_5Y.csv"
 OUT_FILE = BASE_DIR / "category_B_car_sentiment.csv"
 MARKET_CLOSE = time(16, 0)
 CAPM_LOOKBACK = 252
-RISK_FREE_RATE = 0.02
+RISK_FREE_RATE = 0.0
 
 
 def load_price_series(path: Path, close_name: str) -> pd.DataFrame:
