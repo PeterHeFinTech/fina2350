@@ -5,7 +5,7 @@ from pathlib import Path
 
 # ====================== CONFIGURATION ======================
 BASE_DIR = Path("/Users/lin/Desktop/fetch/category C")
-CSV_PATH = BASE_DIR / "category_C_car_sentiment.csv"      # ← 已改为最终文件
+CSV_PATH = BASE_DIR / "category_C_car_sentiment.csv"      
 # ===========================================================
 
 def calculate_p_values():
