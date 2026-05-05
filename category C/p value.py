@@ -27,7 +27,7 @@ def calculate_p_values_all_windows():
         print(f"【{window}】")
         print(f"{'='*70}")
 
-        # 1. 单样本 t 检验
+    
         t_stat, p_val_ttest = stats.ttest_1samp(df[window], 0)
         print(f"\n[1] One-sample T-test (H0: Mean {window} = 0)")
         print(f"    Mean {window}: {df[window].mean():.4f}")
