@@ -10,7 +10,7 @@ from transformers import pipeline
 # =================================================================
 # 1. GLOBAL CONFIGURATION
 # =================================================================
-API_TOKEN = 'aJIeaXHo9cCmu83T92tT0nwgCMm4SLhIQzRTUDN7'
+API_TOKEN = 'ENTER YOUR API TOKEN'
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_FILE = BASE_DIR / "category_C_news_cleaned.csv"
 
