@@ -4,8 +4,8 @@ import seaborn as sns
 from pathlib import Path
 
 # ====================== CONFIGURATION ======================
-BASE_DIR = Path("/Users/lin/Desktop/fetch/category C")
-CSV_PATH = BASE_DIR / "category_C_car_sentiment.csv"      # ← 已改为最终文件
+BASE_DIR = Path(__file__).resolve().parent
+CSV_PATH = BASE_DIR / "category_C_car_sentiment.csv"     
 OUTPUT_IMAGE = BASE_DIR / "nvda_full_timeline_analysis.png"
 # ===========================================================
 

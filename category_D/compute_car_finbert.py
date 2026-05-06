@@ -12,8 +12,8 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 BASE_DIR = Path(__file__).resolve().parent
 NEWS_FILE = BASE_DIR / "D.csv"
-NVDA_FILE = Path("/Users/hetianqu/Documents/FINA2350/fina2350——旧版/nvda_price_data/NVDA_5Y.csv")
-QQQ_FILE = Path("/Users/hetianqu/Documents/FINA2350/fina2350——旧版/nvda_price_data/QQQ_5Y.csv")
+NVDA_FILE = BASE_DIR.parent / "stock_price" / "NVDA_5Y.csv"
+QQQ_FILE = BASE_DIR.parent / "stock_price" / "QQQ_5Y.csv"
 OUT_FILE = BASE_DIR / "D_finbert_car.csv"
 MODEL_NAME = "ProsusAI/finbert"
 MARKET_CLOSE = time(16, 0)

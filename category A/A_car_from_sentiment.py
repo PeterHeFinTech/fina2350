@@ -9,8 +9,8 @@ import statsmodels.api as sm
 # --- CONFIGURATION ---
 BASE_DIR = Path(__file__).resolve().parent
 NEWS_FILE = BASE_DIR / "finbert_ai_analysis_report.csv" 
-NVDA_FILE = BASE_DIR / "NVDA_5Y.csv"
-QQQ_FILE = BASE_DIR / "QQQ_5Y.csv"
+NVDA_FILE = BASE_DIR.parent / "stock_price" / "NVDA_5Y.csv"
+QQQ_FILE = BASE_DIR.parent / "stock_price" / "QQQ_5Y.csv"
 OUT_CSV = BASE_DIR / "nvda_sentiment_regression_results.csv"
 
 MARKET_CLOSE = time(16, 0)

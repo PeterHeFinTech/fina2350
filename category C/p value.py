@@ -4,7 +4,7 @@ from scipy import stats
 from pathlib import Path
 
 
-BASE_DIR = Path("/Users/lin/Desktop/fetch/category C")
+BASE_DIR = Path(__file__).resolve().parent
 CSV_PATH = BASE_DIR / "category_C_car_sentiment.csv"   
 
 

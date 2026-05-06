@@ -5,11 +5,11 @@ import pandas as pd
 
 
 BASE_DIR = Path(__file__).resolve().parent
-PRICE_DIR = BASE_DIR.parent / "nvda_price_data"
+PRICE_DIR = BASE_DIR.parent / "stock_price"
 
 NEWS_FILE = BASE_DIR / "category_B.csv"
-NVDA_FILE = PRICE_DIR / "NVDA_5Y.csv"
-QQQ_FILE = PRICE_DIR / "QQQ_5Y.csv"
+NVDA_FILE = BASE_DIR.parent / "stock_price" / "NVDA_5Y.csv"
+QQQ_FILE = BASE_DIR.parent / "stock_price" / "QQQ_5Y.csv"
 OUT_FILE = BASE_DIR / "category_B_car_sentiment.csv"
 MARKET_CLOSE = time(16, 0)
 CAPM_LOOKBACK = 252
@@ -121,6 +121,7 @@ def main() -> None:
 
         rows.append(
             {
+                "date": event_date.strftime('%Y-%m-%d'),
                 "CAR-1": car_m1,
                 "CAR0": car_0,
                 "CAR1": car_1,
@@ -129,7 +130,7 @@ def main() -> None:
             }
         )
 
-    out_df = pd.DataFrame(rows, columns=["CAR-1", "CAR0", "CAR1", "CAR2", "sentiment"])
+    out_df = pd.DataFrame(rows, columns=["date", "CAR-1", "CAR0", "CAR1", "CAR2", "sentiment"])
     out_df.to_csv(OUT_FILE, index=False)
     print(f"Saved: {OUT_FILE} (rows={len(out_df)})")
 

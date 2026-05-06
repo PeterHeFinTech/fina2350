@@ -9,8 +9,8 @@ from datetime import datetime
 ESTIMATION_LOOKBACK = 252 
 RELEVANCE_THRESHOLD = 0.20
 
-BASE_DIR = Path("/Users/lin/Desktop/fetch/category C")
-PRICE_DIR = BASE_DIR / "nvda_price_data"
+BASE_DIR = Path(__file__).resolve().parent
+PRICE_DIR = BASE_DIR.parent / "stock_price"
 
 NEWS_FILE = BASE_DIR / "category_C_news_cleaned.csv"
 NVDA_FILE = PRICE_DIR / "NVDA_5Y.csv"
