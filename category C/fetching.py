@@ -11,7 +11,7 @@ from transformers import pipeline
 # 1. GLOBAL CONFIGURATION
 # =================================================================
 API_TOKEN = 'aJIeaXHo9cCmu83T92tT0nwgCMm4SLhIQzRTUDN7'
-BASE_DIR = Path("/Users/lin/Desktop/fetch/category C")
+BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_FILE = BASE_DIR / "category_C_news_cleaned.csv"
 
 # ====================== CLEANER MODEL LOADING ======================
